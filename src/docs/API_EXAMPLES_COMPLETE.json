@@ -1,0 +1,552 @@
+{
+  "apiVersion": "1.0.0",
+  "title": "Clave de Sales API - Complete Examples",
+  "description": "Exemplos completos de requisições e respostas da API, 100% alinhados com schema.prisma",
+  
+  "authentication": {
+    "type": "Bearer Token (JWT)",
+    "header": "Authorization: Bearer {token}",
+    "note": "Todos os endpoints (exceto /auth/login) requerem autenticação"
+  },
+
+  "endpoints": {
+    
+    "auth": {
+      "login": {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "description": "Autenticação do usuário",
+        "request": {
+          "email": "artista@demo.com",
+          "password": "senha123"
+        },
+        "response": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          "user": {
+            "id": "user-1",
+            "name": "Sofia Mendes",
+            "email": "artista@demo.com",
+            "role": "STUDENT",
+            "status": "ACTIVE",
+            "studentProfile": {
+              "userId": "user-1",
+              "stageName": "Sofia M.",
+              "avatarUrl": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia",
+              "bio": "Apaixonada por Bossa Nova 🎵"
+            }
+          },
+          "expiresIn": "7d"
+        }
+      }
+    },
+
+    "projects": {
+      "list": {
+        "method": "GET",
+        "path": "/api/projects",
+        "description": "Lista todos os projetos da turma atual",
+        "queryParams": {
+          "seasonId": "season-1",
+          "classId": "class-1",
+          "status": "ACTIVE | UPCOMING | COMPLETED (opcional)"
+        },
+        "response": {
+          "projects": [
+            {
+              "id": "proj-1",
+              "templateId": "template-1",
+              "classId": "class-1",
+              "seasonId": "season-1",
+              "name": "Vozes do Brasil",
+              "description": "Uma jornada pela riqueza musical brasileira",
+              "coverImage": "https://images.unsplash.com/photo-1493225457124.jpg",
+              "status": "ACTIVE",
+              "isVisible": true,
+              "releasedAt": "2024-01-15T00:00:00Z",
+              "createdAt": "2024-01-10T10:00:00Z",
+              "updatedAt": "2024-01-15T08:00:00Z",
+              "_stats": {
+                "totalTracks": 6,
+                "completedTracks": 2,
+                "progress": 33.33
+              }
+            },
+            {
+              "id": "proj-2",
+              "templateId": "template-2",
+              "classId": "class-1",
+              "seasonId": "season-1",
+              "name": "Clássicos do Rock",
+              "description": "Explorando as raízes do rock brasileiro",
+              "coverImage": "https://images.unsplash.com/photo-1498038432885.jpg",
+              "status": "UPCOMING",
+              "isVisible": false,
+              "releasedAt": null,
+              "createdAt": "2024-01-10T10:00:00Z",
+              "updatedAt": "2024-01-10T10:00:00Z",
+              "_stats": {
+                "totalTracks": 8,
+                "completedTracks": 0,
+                "progress": 0
+              }
+            }
+          ],
+          "pagination": {
+            "total": 2,
+            "page": 1,
+            "limit": 20
+          }
+        }
+      },
+
+      "getById": {
+        "method": "GET",
+        "path": "/api/projects/{projectId}",
+        "description": "Detalhes de um projeto específico com suas músicas",
+        "response": {
+          "id": "proj-1",
+          "name": "Vozes do Brasil",
+          "description": "Uma jornada pela riqueza musical brasileira",
+          "coverImage": "https://images.unsplash.com/photo-1493225457124.jpg",
+          "status": "ACTIVE",
+          "isVisible": true,
+          "tracks": [
+            {
+              "id": "track-1",
+              "projectId": "proj-1",
+              "templateId": "track-template-1",
+              "title": "Garota de Ipanema",
+              "artist": "Tom Jobim e Vinícius de Moraes",
+              "description": "Obra-prima da Bossa Nova que conquistou o mundo",
+              "videoUrl": null,
+              "technicalInstruction": "Atenção à leveza vocal, respiração controlada e interpretação natural.",
+              "lyrics": "Olha que coisa mais linda\\nMais cheia de graça\\nÉ ela a menina\\nQue vem e que passa...",
+              "order": 1,
+              "status": "PUBLISHED",
+              "isVisible": true,
+              "demoRequired": true,
+              "pressQuizRequired": true,
+              "createdAt": "2024-01-10T10:00:00Z",
+              "updatedAt": "2024-01-15T08:00:00Z",
+              "_studentProgress": {
+                "id": "progress-1",
+                "studentId": "user-1",
+                "trackSceneId": "track-1",
+                "status": "STUDYING",
+                "completedAt": null,
+                "createdAt": "2024-01-15T09:00:00Z",
+                "updatedAt": "2024-01-20T14:30:00Z"
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "trackScenes": {
+      "getStudyTracks": {
+        "method": "GET",
+        "path": "/api/track-scenes/{trackSceneId}/study-tracks",
+        "description": "Lista todas as faixas de estudo de uma música com progresso do aluno",
+        "response": {
+          "trackScene": {
+            "id": "track-1",
+            "title": "Garota de Ipanema",
+            "artist": "Tom Jobim e Vinícius de Moraes"
+          },
+          "studyTracks": [
+            {
+              "id": "st-instance-garota-1",
+              "trackSceneId": "track-1",
+              "templateId": "st-template-garota-1",
+              "categoryId": "cat-music-1",
+              "categoryKey": "HARMONY",
+              "title": "Harmonia e Progressão de Acordes",
+              "description": "Domine a progressão harmônica característica da Bossa Nova",
+              "technicalNotes": "Foque na transição suave entre os acordes Fmaj7, G7, Gm7, Gb7.",
+              "videoUrl": "https://www.youtube.com/watch?v=example1",
+              "audioUrl": null,
+              "pdfUrl": null,
+              "order": 1,
+              "estimatedMinutes": 15,
+              "isRequired": true,
+              "isVisible": true,
+              "createdAt": "2024-01-10T10:00:00Z",
+              "updatedAt": "2024-01-10T10:00:00Z",
+              "category": {
+                "id": "cat-music-1",
+                "name": "Harmonia",
+                "key": "HARMONY",
+                "icon": "🎵",
+                "color": "#4F46E5",
+                "description": "Estudo de acordes e progressões harmônicas"
+              },
+              "studentProgress": {
+                "id": "progress-1-1",
+                "studentId": "user-1",
+                "studyTrackId": "st-instance-garota-1",
+                "completed": true,
+                "completedAt": "2024-01-18T14:30:00Z",
+                "notes": "Consegui dominar as transições harmônicas!",
+                "practiceTime": 45,
+                "createdAt": "2024-01-15T09:00:00Z",
+                "updatedAt": "2024-01-18T14:30:00Z"
+              }
+            },
+            {
+              "id": "st-instance-garota-2",
+              "trackSceneId": "track-1",
+              "templateId": "st-template-garota-2",
+              "categoryId": "cat-music-2",
+              "categoryKey": "RHYTHM",
+              "title": "Batida e Ritmo da Bossa Nova",
+              "description": "Aprenda a batida sincopada característica",
+              "technicalNotes": "O ritmo da Bossa Nova é baseado no samba, mas mais suave.",
+              "videoUrl": "https://www.youtube.com/watch?v=example2",
+              "audioUrl": null,
+              "pdfUrl": null,
+              "order": 2,
+              "estimatedMinutes": 20,
+              "isRequired": true,
+              "isVisible": true,
+              "category": {
+                "id": "cat-music-2",
+                "name": "Ritmo",
+                "key": "RHYTHM",
+                "icon": "🥁",
+                "color": "#8B5CF6"
+              },
+              "studentProgress": {
+                "id": "progress-1-2",
+                "studentId": "user-1",
+                "studyTrackId": "st-instance-garota-2",
+                "completed": true,
+                "completedAt": "2024-01-19T16:20:00Z",
+                "notes": "A batida está ficando natural agora",
+                "practiceTime": 60,
+                "createdAt": "2024-01-15T09:00:00Z",
+                "updatedAt": "2024-01-19T16:20:00Z"
+              }
+            },
+            {
+              "id": "st-instance-garota-3",
+              "trackSceneId": "track-1",
+              "templateId": "st-template-garota-3",
+              "categoryId": "cat-music-3",
+              "categoryKey": "MELODY",
+              "title": "Linha Melódica Principal",
+              "description": "Pratique a melodia vocal com afinação correta",
+              "technicalNotes": "Atenção aos intervalos e ornamentações sutis.",
+              "videoUrl": "https://www.youtube.com/watch?v=example3",
+              "audioUrl": null,
+              "pdfUrl": null,
+              "order": 3,
+              "estimatedMinutes": 25,
+              "isRequired": true,
+              "isVisible": true,
+              "category": {
+                "id": "cat-music-3",
+                "name": "Melodia",
+                "key": "MELODY",
+                "icon": "🎼",
+                "color": "#EC4899"
+              },
+              "studentProgress": {
+                "id": "progress-1-3",
+                "studentId": "user-1",
+                "studyTrackId": "st-instance-garota-3",
+                "completed": false,
+                "completedAt": null,
+                "notes": null,
+                "practiceTime": 30,
+                "createdAt": "2024-01-15T09:00:00Z",
+                "updatedAt": "2024-01-20T10:00:00Z"
+              }
+            }
+          ],
+          "summary": {
+            "totalStudyTracks": 6,
+            "completedStudyTracks": 2,
+            "requiredCompleted": 2,
+            "requiredTotal": 5,
+            "percentageComplete": 33.33,
+            "totalPracticeTime": 135,
+            "estimatedRemainingTime": 95,
+            "canSubmitDemo": false
+          }
+        }
+      },
+
+      "updateStudyTrackProgress": {
+        "method": "POST",
+        "path": "/api/study-tracks/{studyTrackId}/progress",
+        "description": "Atualiza o progresso do aluno em uma faixa de estudo",
+        "request": {
+          "completed": true,
+          "notes": "Consegui dominar todas as transições!",
+          "practiceTime": 15
+        },
+        "response": {
+          "id": "progress-1-4",
+          "studentId": "user-1",
+          "studyTrackId": "st-instance-garota-4",
+          "completed": true,
+          "completedAt": "2024-01-22T16:45:00Z",
+          "notes": "Consegui dominar todas as transições!",
+          "practiceTime": 75,
+          "createdAt": "2024-01-15T09:00:00Z",
+          "updatedAt": "2024-01-22T16:45:00Z"
+        }
+      }
+    },
+
+    "submissions": {
+      "create": {
+        "method": "POST",
+        "path": "/api/submissions",
+        "description": "Enviar demo para avaliação",
+        "requestType": "multipart/form-data",
+        "request": {
+          "trackSceneId": "track-1",
+          "mediaFile": "File (audio/video)",
+          "notes": "Primeira versão focando na interpretação suave"
+        },
+        "response": {
+          "id": "submission-1",
+          "studentId": "user-1",
+          "trackSceneId": "track-1",
+          "attemptNumber": 1,
+          "mediaUrl": "https://storage.clavedesa les.com/submissions/user-1/track-1-attempt-1.mp3",
+          "notes": "Primeira versão focando na interpretação suave",
+          "status": "PENDING_REVIEW",
+          "pressUnlocked": false,
+          "createdAt": "2024-01-20T15:30:00Z",
+          "updatedAt": "2024-01-20T15:30:00Z",
+          "reviewedAt": null
+        }
+      },
+
+      "list": {
+        "method": "GET",
+        "path": "/api/submissions",
+        "description": "Lista submissions do aluno",
+        "queryParams": {
+          "studentId": "user-1 (opcional, default: usuário logado)",
+          "trackSceneId": "track-1 (opcional)",
+          "status": "PENDING_REVIEW | APPROVED | etc (opcional)"
+        },
+        "response": {
+          "submissions": [
+            {
+              "id": "submission-1",
+              "studentId": "user-1",
+              "trackSceneId": "track-1",
+              "attemptNumber": 1,
+              "mediaUrl": "https://storage.clavedesales.com/submissions/user-1/track-1-attempt-1.mp3",
+              "notes": "Primeira versão focando na interpretação suave",
+              "status": "APPROVED",
+              "pressUnlocked": true,
+              "createdAt": "2024-01-20T15:30:00Z",
+              "updatedAt": "2024-01-22T10:15:00Z",
+              "reviewedAt": "2024-01-22T10:15:00Z",
+              "trackScene": {
+                "id": "track-1",
+                "title": "Garota de Ipanema",
+                "artist": "Tom Jobim e Vinícius de Moraes"
+              },
+              "reviews": [
+                {
+                  "id": "review-1",
+                  "submissionId": "submission-1",
+                  "teacherId": "teacher-1",
+                  "teacherName": "Prof. João Santos",
+                  "type": "POSITIVE",
+                  "rating": 4.5,
+                  "comment": "Excelente interpretação!",
+                  "feedback": "A suavidade está perfeita e a respiração bem controlada.",
+                  "technicalNotes": "Pequeno ajuste na entrada do segundo verso.",
+                  "approved": true,
+                  "createdAt": "2024-01-22T10:15:00Z",
+                  "updatedAt": "2024-01-22T10:15:00Z"
+                }
+              ]
+            }
+          ],
+          "pagination": {
+            "total": 1,
+            "page": 1,
+            "limit": 20
+          }
+        }
+      }
+    },
+
+    "reviews": {
+      "create": {
+        "method": "POST",
+        "path": "/api/reviews",
+        "description": "Professor cria avaliação de uma submission",
+        "authentication": "Requer role TEACHER",
+        "request": {
+          "submissionId": "submission-1",
+          "type": "POSITIVE",
+          "rating": 4.5,
+          "comment": "Excelente interpretação!",
+          "feedback": "A suavidade está perfeita e a respiração bem controlada. Você capturou a essência da Bossa Nova.",
+          "technicalNotes": "Pequeno ajuste na entrada do segundo verso. No mais, está aprovado!",
+          "approved": true
+        },
+        "response": {
+          "id": "review-1",
+          "submissionId": "submission-1",
+          "teacherId": "teacher-1",
+          "teacherName": "Prof. João Santos",
+          "type": "POSITIVE",
+          "rating": 4.5,
+          "comment": "Excelente interpretação!",
+          "feedback": "A suavidade está perfeita e a respiração bem controlada.",
+          "technicalNotes": "Pequeno ajuste na entrada do segundo verso.",
+          "approved": true,
+          "createdAt": "2024-01-22T10:15:00Z",
+          "updatedAt": "2024-01-22T10:15:00Z"
+        }
+      }
+    },
+
+    "career": {
+      "get": {
+        "method": "GET",
+        "path": "/api/career",
+        "description": "Estatísticas de carreira do aluno na temporada",
+        "queryParams": {
+          "seasonId": "season-1"
+        },
+        "response": {
+          "id": "career-1",
+          "studentId": "user-1",
+          "seasonId": "season-1",
+          "fans": 8750,
+          "level": "INDIE",
+          "levelNumber": 4,
+          "currentStreak": 12,
+          "longestStreak": 28,
+          "totalDemos": 15,
+          "approvedDemos": 12,
+          "totalAchievements": 8,
+          "toursCompleted": 2,
+          "lastActiveDate": "2024-01-26T10:00:00Z",
+          "createdAt": "2024-01-10T10:00:00Z",
+          "updatedAt": "2024-01-26T10:00:00Z",
+          "levelProgress": {
+            "currentLevel": "INDIE",
+            "nextLevel": "RISING_STAR",
+            "currentFans": 8750,
+            "nextLevelFans": 12000,
+            "fansToNext": 3250,
+            "progressPercentage": 73
+          }
+        }
+      }
+    },
+
+    "studyTrackCategories": {
+      "list": {
+        "method": "GET",
+        "path": "/api/study-track-categories",
+        "description": "Lista categorias de faixas de estudo do curso",
+        "queryParams": {
+          "courseId": "course-1"
+        },
+        "response": {
+          "categories": [
+            {
+              "id": "cat-music-1",
+              "courseId": "course-1",
+              "name": "Harmonia",
+              "key": "HARMONY",
+              "icon": "🎵",
+              "color": "#4F46E5",
+              "description": "Estudo de acordes e progressões harmônicas",
+              "order": 1,
+              "isActive": true,
+              "createdAt": "2024-01-01T00:00:00Z",
+              "updatedAt": "2024-01-01T00:00:00Z"
+            },
+            {
+              "id": "cat-music-2",
+              "courseId": "course-1",
+              "name": "Ritmo",
+              "key": "RHYTHM",
+              "icon": "🥁",
+              "color": "#8B5CF6",
+              "description": "Prática de padrões rítmicos e batidas",
+              "order": 2,
+              "isActive": true,
+              "createdAt": "2024-01-01T00:00:00Z",
+              "updatedAt": "2024-01-01T00:00:00Z"
+            }
+          ]
+        }
+      }
+    },
+
+    "dailyMissions": {
+      "getToday": {
+        "method": "GET",
+        "path": "/api/daily-missions/today",
+        "description": "Rotina diária de hoje",
+        "response": {
+          "id": "mission-1",
+          "templateId": "template-1",
+          "studentId": "user-1",
+          "seasonId": "season-1",
+          "date": "2024-01-26",
+          "status": "DONE",
+          "attemptsCount": 1,
+          "completed": true,
+          "completedAt": "2024-01-26T09:30:00Z",
+          "template": {
+            "id": "template-1",
+            "title": "Passagem de Som - Bossa Nova",
+            "description": "Aquecimento vocal e técnicas de respiração",
+            "videoUrl": null,
+            "exercises": [
+              {
+                "id": "exercise-1",
+                "title": "Respiração Diafragmática",
+                "description": "Exercício de controle respiratório",
+                "videoUrl": null,
+                "duration": 5,
+                "order": 1
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+
+  "errorResponses": {
+    "400": {
+      "error": "Bad Request",
+      "message": "Descrição específica do erro",
+      "details": {}
+    },
+    "401": {
+      "error": "Unauthorized",
+      "message": "Token inválido ou expirado"
+    },
+    "403": {
+      "error": "Forbidden",
+      "message": "Você não tem permissão para acessar este recurso"
+    },
+    "404": {
+      "error": "Not Found",
+      "message": "Recurso não encontrado"
+    },
+    "500": {
+      "error": "Internal Server Error",
+      "message": "Erro interno do servidor"
+    }
+  }
+}

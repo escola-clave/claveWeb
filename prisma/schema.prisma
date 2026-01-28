@@ -1,20 +1,20 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-////////////////////
-/// ENUMS
-////////////////////
+//
+// ENUMS
+//
 
 enum UserRole {
   ADMIN
   TEACHER
-  STUDENT
+  STUDENT // Anteriormente era ARTIST no mock, mas STUDENT é mais genérico
 }
 
 enum UserStatus {
@@ -33,17 +33,6 @@ enum SeasonStatus {
   CLOSED
 }
 
-enum ClassStudentStatus {
-  ACTIVE
-  TRANSFERRED
-  DROPPED
-}
-
-enum ClassTeacherStatus {
-  ACTIVE
-  REMOVED
-}
-
 enum ProjectType {
   ALBUM
   PLAY
@@ -53,6 +42,7 @@ enum ProjectStatus {
   DRAFT
   ACTIVE
   COMPLETED
+  UPCOMING
 }
 
 enum TrackSceneStatus {
@@ -61,29 +51,131 @@ enum TrackSceneStatus {
   ARCHIVED
 }
 
-enum StudentTrackStatus {
+enum TrackMaterialType {
+  PDF
+  AUDIO
+  VIDEO // Adicionado para vídeos de aula
+  TEXT
+  LINK
+}
+
+// REMOVIDO: enum StudyTrackType - agora será String customizável
+//
+// STUDY TRACK CATEGORIES (TIPOS CUSTOMIZÁVEIS)
+// Define os tipos de faixas de estudo que podem ser criados
+// Permite que cada escola/curso crie seus próprios tipos
+//
+
+model StudyTrackCategory {
+  id          String      @id @default(uuid())
+  courseId    String      // Cada curso pode ter suas categorias
+  name        String      // Ex: "Harmonia", "Blocking", "Expressão Corporal"
+  key         String      // Chave única: "HARMONY", "BLOCKING", "BODY_EXPRESSION"
+  icon        String?     // Ícone opcional: "🎵", "🎭", "💃"
+  color       String?     // Cor para UI: "#FF5733"
+  description String?
+  order       Int         @default(0)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  course               Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  studyTrackTemplates  StudyTrackTemplate[]  // Templates de faixas de estudo
+
+  @@unique([courseId, key])
+  @@index([courseId])
+  @@index([isActive])
+}
+
+//
+// STUDY TRACK TEMPLATES (CONTEÚDO DIDÁTICO REUTILIZÁVEL)
+// Templates de faixas de estudo que podem ser reutilizados em múltiplos semestres
+// Vinculados aos TrackSceneTemplates para reuso completo
+//
+
+model StudyTrackTemplate {
+  id                    String   @id @default(uuid())
+  trackSceneTemplateId  String   // Template da música/cena
+  categoryId            String?  // Categoria opcional
+  categoryKey           String?  // Denormalizado: "HARMONY", "BLOCKING"
+  title                 String
+  description           String?
+  technicalNotes        String?  // Notas técnicas pedagógicas
+  videoUrl              String?
+  audioUrl              String?
+  pdfUrl                String?
+  order                 Int
+  estimatedMinutes      Int      @default(15)
+  isRequired            Boolean  @default(true)
+  isVisible             Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  trackSceneTemplate  TrackSceneTemplate  @relation(fields: [trackSceneTemplateId], references: [id], onDelete: Cascade)
+  category            StudyTrackCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  studyTracks         StudyTrack[]        // Instâncias criadas deste template
+
+  @@index([trackSceneTemplateId])
+  @@index([categoryId])
+  @@index([order])
+}
+
+//
+// STUDY TRACKS (INSTÂNCIAS DAS FAIXAS DE ESTUDO)
+// Instâncias de faixas de estudo criadas quando um projeto é instanciado
+// Cada turma/semestre tem suas próprias instâncias
+//
+
+model StudyTrack {
+  id               String   @id @default(uuid())
+  trackSceneId     String   // Instância da música/cena
+  templateId       String   // Template original
+  categoryId       String?  // Categoria (copiada do template)
+  categoryKey      String?  // Denormalizado para performance
+  title            String   // Copiado do template (pode ser customizado)
+  description      String?
+  technicalNotes   String?
+  videoUrl         String?  // URLs podem ser diferentes da instância
+  audioUrl         String?
+  pdfUrl           String?
+  order            Int
+  estimatedMinutes Int      @default(15)
+  isRequired       Boolean  @default(true)
+  isVisible        Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  trackScene      TrackScene            @relation(fields: [trackSceneId], references: [id], onDelete: Cascade)
+  template        StudyTrackTemplate    @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  category        StudyTrackCategory?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  studentProgress StudentStudyTrack[]
+
+  @@index([trackSceneId])
+  @@index([templateId])
+  @@index([categoryId])
+  @@index([order])
+}
+
+enum StudentTrackSceneStatus {
   LOCKED
   AVAILABLE
   STUDYING
   COMPLETED
 }
 
-enum DailyMissionStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-enum StudentDailyMissionStatus {
-  PENDING
-  DONE
-  DONE_WITH_PENALTY
-  SKIPPED
-}
-
 enum SubmissionStatus {
   PENDING
+  PENDING_REVIEW
   REVIEWED
+  APPROVED
+  NEEDS_REVISION
+  REJECTED
+}
+
+enum DemoStatus {
+  PENDING_REVIEW
+  APPROVED
+  NEEDS_REVISION
   REJECTED
 }
 
@@ -96,12 +188,6 @@ enum ReviewType {
 enum PressResult {
   PASS
   FAIL
-}
-
-enum PressQuizStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
 }
 
 enum TourStatus {
@@ -117,77 +203,134 @@ enum StreakDayStatus {
   PAUSED
 }
 
+enum DailyMissionStatus {
+  DONE
+  DONE_WITH_PENALTY
+  SKIPPED
+}
+
+enum ClassStudentStatus {
+  ACTIVE
+  TRANSFERRED
+  DROPPED
+}
+
+enum DailyMissionTemplateStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum ActorType {
   USER
   SYSTEM
   RULE_ENGINE
 }
 
-enum TrackMaterialType {
-  PDF
-  AUDIO
-  TEXT
-  LINK
+enum StreakEffect {
+  INCREMENT
+  RESET
+  PAUSE
+  NO_EFFECT
 }
 
-////////////////////
-/// IDENTIDADE
-////////////////////
+enum AchievementCategory {
+  STREAK
+  DEMOS
+  SOCIAL
+  SPECIAL
+}
+
+enum AchievementTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum ArtistLevel {
+  SHOWER
+  GARAGE
+  UNDERGROUND
+  INDIE
+  RISING_STAR
+  HEADLINER
+  MAIN_STAGE
+}
+
+//
+// IDENTITY
+//
 
 model User {
-  id                 String   @id @default(uuid())
+  id                 String     @id @default(uuid())
   name               String
-  email              String   @unique
+  email              String     @unique
   passwordHash       String
   role               UserRole
   status             UserStatus
   mustChangePassword Boolean
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
-  studentProfile     StudentProfile?
+  studentProfile StudentProfile?
+  teacherProfile TeacherProfile?
+  notifications  Notification[]
+  domainEvents   DomainEvent[]   @relation("ActorEvents")
 
-  studentClasses     ClassStudent[]
-  teacherClasses     ClassTeacher[]
-
-  studentTrackScenes StudentTrackScene[]
-  dailyMissions      StudentDailyMission[]
-
-  submissions        Submission[]
-  reviewsGiven       Review[]        @relation("TeacherReviews")
-  pressAttempts      PressAttempt[]
-
-  tours              Tour[]
-  vacations          Vacation[]
-  careers            Career[]
-  fanTransactions    FanTransaction[]
+  @@index([role])
+  @@index([status])
+  @@index([email])
 }
 
 model StudentProfile {
-  userId           String   @id
-  stageName        String
-  avatarUrl        String?
-  bio              String?
-  currentCourseId  String?
-  currentSeasonId  String?
-  currentClassId   String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  userId              String   @id
+  stageName           String   // Nome artístico (funciona para música e teatro)
+  avatarUrl           String?
+  bio                 String?
+  specialization      String?  // Especialização: Música: "Voz", "Violão" | Teatro: "Interpretação", "Direção"
+  genres              String?  // Gêneros/Estilos (JSON array): Música: ["MPB", "Jazz"] | Teatro: ["Drama", "Comédia"]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  user              User     @relation(fields: [userId], references: [id])
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classStudents    ClassStudent[]
+  tours            Tour[]
+  careers          Career[]
+  missions         DailyMission[]
+  trackScenes      StudentTrackScene[]
+  studentStudyTracks StudentStudyTrack[]  // Progresso em faixas de estudo
+  submissions      Submission[]
+  pressAttempts    PressAttempt[]
+  teacherReviews   Review[]         @relation("TeacherReviews")
+  fanTransactions  FanTransaction[]
+  vacations        Vacation[]
+  achievements     StudentAchievement[]
 }
 
-////////////////////
-/// ESCOLA
-////////////////////
+model TeacherProfile {
+  userId    String   @id
+  avatarUrl String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classes ClassTeacher[]
+}
+
+//
+// SCHOOL / ACADEMIA
+//
 
 model School {
   id        String   @id @default(uuid())
   name      String
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  courses   Course[]
+  courses Course[]
 }
 
 model Course {
@@ -199,9 +342,11 @@ model Course {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  school    School     @relation(fields: [schoolId], references: [id])
-  seasons   Season[]
-  templates ProjectTemplate[]
+  school                  School                 @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  seasons                 Season[]
+  projectTemplates        ProjectTemplate[]
+  dailyMissionTemplates   DailyMissionTemplate[]
+  studyTrackCategories    StudyTrackCategory[]   // Categorias customizáveis de faixas de estudo
 }
 
 model Season {
@@ -211,11 +356,19 @@ model Season {
   startDate DateTime
   endDate   DateTime
   status    SeasonStatus
+  isActive  Boolean      @default(true)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  course    Course      @relation(fields: [courseId], references: [id])
-  classes   Class[]
+  course           Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  classes          Class[]
+  projects         Project[]
+  careers          Career[]
+  tours            Tour[]
+  pressQuizzes     PressQuiz[]
+  dailyMissions    DailyMission[]
+  fanTransactions  FanTransaction[]
+  vacations        Vacation[]
 }
 
 model Class {
@@ -223,315 +376,453 @@ model Class {
   seasonId    String
   name        String
   maxStudents Int
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  season      Season   @relation(fields: [seasonId], references: [id])
-  students    ClassStudent[]
-  teachers    ClassTeacher[]
-  projects    Project[]
+  season              Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  classStudents       ClassStudent[]
+  teachers            ClassTeacher[]
+  projects            Project[]
 }
 
-model ClassStudent {
-  id        String              @id @default(uuid())
-  classId   String
-  studentId String
-  joinedAt  DateTime
-  leftAt    DateTime?
-  status    ClassStudentStatus
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+model ClassTeacher {
+  id         String    @id @default(uuid())
+  teacherId  String
+  classId    String
+  joinedAt   DateTime
+  leftAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  class     Class   @relation(fields: [classId], references: [id])
-  student   User    @relation(fields: [studentId], references: [id])
+  teacher TeacherProfile @relation(fields: [teacherId], references: [userId], onDelete: Cascade)
+  class   Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, classId])
+}
+
+//
+// CLASS ENROLLMENT (AUDIT)
+//
+
+model ClassStudent {
+  id         String              @id @default(uuid())
+  classId    String
+  studentId  String
+  joinedAt   DateTime
+  leftAt     DateTime?
+  status     ClassStudentStatus
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  class   Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
 
   @@unique([classId, studentId])
 }
 
-model ClassTeacher {
-  id        String              @id @default(uuid())
-  classId   String
-  teacherId String
-  joinedAt  DateTime
-  leftAt    DateTime?
-  status    ClassTeacherStatus
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
-
-  class     Class   @relation(fields: [classId], references: [id])
-  teacher   User    @relation(fields: [teacherId], references: [id])
-
-  @@unique([classId, teacherId])
-}
-
-////////////////////
-/// TEMPLATES
-////////////////////
+//
+// PROJECT / PEDAGOGY
+//
 
 model ProjectTemplate {
-  id          String      @id @default(uuid())
-  courseId    String
-  name        String
-  type        ProjectType
-  description String?
-  version     Int
-  isActive    Boolean
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id            String      @id @default(uuid())
+  courseId      String
+  name          String
+  type          ProjectType
+  description   String?
+  coverImage    String?
+  version       Int         @default(1)
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  course      Course     @relation(fields: [courseId], references: [id])
-  scenes      TrackSceneTemplate[]
+  course         Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  projects       Project[]
+  trackTemplates TrackSceneTemplate[]
+}
+
+model Project {
+  id                        String        @id @default(uuid())
+  templateId                String
+  projectTemplateVersion    Int           @default(1)
+  classId                   String
+  seasonId                  String
+  name                      String
+  description               String?
+  coverImage                String?
+  status                    ProjectStatus
+  isVisible                 Boolean       @default(false)
+  releasedAt                DateTime?
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+
+  template   ProjectTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  class      Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
+  season     Season            @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  tracks     TrackScene[]
 }
 
 model TrackSceneTemplate {
-  id                   String   @id @default(uuid())
+  id                    String   @id @default(uuid())
   projectTemplateId     String
-  title                String
-  description          String?
-  technicalInstruction String?
-  order                Int
-  unlockAfterTrackId   String?
-  version              Int
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  title                 String
+  artist                String?
+  description           String?
+  technicalInstruction  String?
+  lyrics                String?
+  order                 Int
+  unlockAfterTrackId    String?
+  demoRequired          Boolean  @default(true)
+  pressQuizRequired     Boolean  @default(false)
+  version               Int      @default(1)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  projectTemplate      ProjectTemplate @relation(fields: [projectTemplateId], references: [id])
-  materials            TrackMaterialTemplate[]
-}
-
-model TrackMaterialTemplate {
-  id                   String            @id @default(uuid())
-  trackSceneTemplateId String
-  type                 TrackMaterialType
-  title                String
-  defaultContentUrl    String?
-  defaultTextContent   String?
-  order                Int
-  isRequired           Boolean
-  version              Int
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
-
-  trackSceneTemplate   TrackSceneTemplate @relation(fields: [trackSceneTemplateId], references: [id])
-}
-
-////////////////////
-/// INSTÂNCIAS
-////////////////////
-
-model Project {
-  id                    String        @id @default(uuid())
-  projectTemplateId      String
-  projectTemplateVersion Int
-  classId               String
-  seasonId              String
-  name                  String
-  status                ProjectStatus
-  isVisible             Boolean
-  releasedAt            DateTime?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-
-  class                 Class         @relation(fields: [classId], references: [id])
-  scenes                TrackScene[]
+  projectTemplate   ProjectTemplate         @relation(fields: [projectTemplateId], references: [id], onDelete: Cascade)
+  tracks            TrackScene[]
+  materials         TrackMaterialTemplate[]
+  studyTrackTemplates StudyTrackTemplate[]  // Templates de faixas de estudo reutilizáveis
 }
 
 model TrackScene {
-  id                        String          @id @default(uuid())
-  trackSceneTemplateId      String
-  trackSceneTemplateVersion Int
-  projectId                String
-  title                     String
-  description               String?
-  videoUrl                  String?
-  technicalInstruction      String?
-  order                     Int
-  status                    TrackSceneStatus
-  isVisible                 Boolean
-  createdAt                 DateTime        @default(now())
-  updatedAt                 DateTime        @updatedAt
+  id                          String           @id @default(uuid())
+  projectId                   String
+  templateId                  String
+  trackSceneTemplateVersion   Int              @default(1)
+  title                       String
+  artist                      String?
+  description                 String?
+  videoUrl                    String?
+  technicalInstruction        String?
+  lyrics                      String?
+  order                       Int
+  status                      TrackSceneStatus
+  isVisible                   Boolean          @default(false)
+  demoRequired                Boolean          @default(true)
+  pressQuizRequired           Boolean          @default(false)
+  createdAt                   DateTime         @default(now())
+  updatedAt                   DateTime         @updatedAt
 
-  project                   Project         @relation(fields: [projectId], references: [id])
-  materials                 TrackMaterial[]
-  studentProgress           StudentTrackScene[]
+  project          Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  template         TrackSceneTemplate    @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  submissions      Submission[]
+  studentProgress  StudentTrackScene[]
+  materials        TrackMaterial[]
+  pressQuizzes     PressQuiz[]
+  studyTracks      StudyTrack[]          // Faixas de estudo pedagógicas
+}
+
+//
+// STUDENT PROGRESS ON STUDY TRACKS
+// Acompanha o progresso do aluno em cada faixa de estudo
+// NOTA: StudyTrack já está definido acima (linhas 129-157)
+//
+
+model StudentStudyTrack {
+  id            String    @id @default(uuid())
+  studentId     String
+  studyTrackId  String
+  completed     Boolean   @default(false)
+  completedAt   DateTime?
+  notes         String?   // Notas do aluno sobre esta faixa
+  practiceTime  Int       @default(0) // Tempo de prática em minutos
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  student    StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  studyTrack StudyTrack     @relation(fields: [studyTrackId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, studyTrackId])
+  @@index([studentId])
+  @@index([studyTrackId])
+  @@index([completed])
+}
+
+//
+// TRACK MATERIALS (TEMPLATES & INSTANCES)
+//
+
+model TrackMaterialTemplate {
+  id                    String               @id @default(uuid())
+  trackSceneTemplateId  String
+  type                  TrackMaterialType
+  title                 String
+  defaultContentUrl     String?
+  defaultTextContent    String?
+  order                 Int
+  isRequired            Boolean              @default(false)
+  version               Int                  @default(1)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  template  TrackSceneTemplate  @relation(fields: [trackSceneTemplateId], references: [id], onDelete: Cascade)
+  materials TrackMaterial[]
 }
 
 model TrackMaterial {
-  id                          String            @id @default(uuid())
-  trackMaterialTemplateId     String
-  trackMaterialTemplateVersion Int
+  id                          String               @id @default(uuid())
+  templateId                  String?
   trackSceneId                String
+  trackMaterialTemplateVersion Int                 @default(1)
   type                        TrackMaterialType
   title                       String
   contentUrl                  String?
   textContent                 String?
   order                       Int
-  isVisible                   Boolean
-  createdAt                   DateTime          @default(now())
-  updatedAt                   DateTime          @updatedAt
+  isVisible                   Boolean              @default(false)
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
 
-  trackScene                  TrackScene        @relation(fields: [trackSceneId], references: [id])
+  template   TrackMaterialTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  trackScene TrackScene             @relation(fields: [trackSceneId], references: [id], onDelete: Cascade)
 }
 
-////////////////////
-/// PROGRESSO
-////////////////////
+//
+// STUDENT PROGRESS TRACKING
+//
 
 model StudentTrackScene {
-  id           String            @id @default(uuid())
-  studentId    String
+  id          String                   @id @default(uuid())
+  studentId   String
   trackSceneId String
-  seasonId     String
-  status       StudentTrackStatus
-  completedAt  DateTime?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  status      StudentTrackSceneStatus
+  completedAt DateTime?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
 
-  student      User              @relation(fields: [studentId], references: [id])
-  trackScene   TrackScene        @relation(fields: [trackSceneId], references: [id])
+  student    StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  trackScene TrackScene     @relation(fields: [trackSceneId], references: [id], onDelete: Cascade)
 
-  @@unique([studentId, trackSceneId, seasonId])
+  @@unique([studentId, trackSceneId])
+  @@index([studentId, status])
 }
 
-////////////////////
-/// ROTINA DIÁRIA
-////////////////////
+//
+// ROUTINE / DAILY MISSIONS
+//
 
-model DailyMission {
-  id        String              @id @default(uuid())
+model DailyMissionTemplate {
+  id        String   @id @default(uuid())
   courseId  String
   title     String
+  description String?
   videoUrl  String?
   order     Int
-  status    DailyMissionStatus
-  isActive  Boolean
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  status    DailyMissionTemplateStatus @default(DRAFT)
+  isActive  Boolean                    @default(false)
+  createdAt DateTime                   @default(now())
+  updatedAt DateTime                   @updatedAt
+
+  course       Course               @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  missions     DailyMission[]
+  quizzes      DailyMissionQuiz[]
+  exercises    DailyMissionExercise[]
+}
+
+model DailyMissionExercise {
+  id                   String   @id @default(uuid())
+  dailyMissionTemplateId String
+  title                String
+  description          String?
+  videoUrl             String?
+  duration             Int
+  order                Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  template DailyMissionTemplate @relation(fields: [dailyMissionTemplateId], references: [id], onDelete: Cascade)
 }
 
 model DailyMissionQuiz {
-  id                     String   @id @default(uuid())
-  dailyMissionId         String
-  version                Int
-  questionsJson          Json
-  maxAttemptsPerDay      Int
-  allowRecoveryAttempt   Boolean
-  isActive               Boolean
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  dailyMissionId       String
+  version              Int      @default(1)
+  questionsJson        Json?
+  maxAttemptsPerDay    Int      @default(1)
+  allowRecoveryAttempt Boolean  @default(false)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  mission DailyMissionTemplate @relation(fields: [dailyMissionId], references: [id], onDelete: Cascade)
 }
 
-model StudentDailyMission {
-  id               String                     @id @default(uuid())
-  studentId        String
-  dailyMissionId   String
-  date             DateTime
-  status           StudentDailyMissionStatus
-  quizId           String?
-  attemptsCount    Int
-  answersJson      Json?
-  completedAt      DateTime?
-  createdAt        DateTime                   @default(now())
-  updatedAt        DateTime                   @updatedAt
+model DailyMission {
+  id         String             @id @default(uuid())
+  templateId String
+  studentId  String
+  seasonId   String
+  date       DateTime           @db.Date
+  status     DailyMissionStatus @default(DONE)
+  attemptsCount Int              @default(0)
+  completed     Boolean          @default(false)
+  completedAt   DateTime?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
 
-  student          User                      @relation(fields: [studentId], references: [id])
+  template DailyMissionTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  student  StudentProfile       @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  season   Season               @relation(fields: [seasonId], references: [id], onDelete: Cascade)
 
-  @@unique([studentId, dailyMissionId, date])
+  @@unique([studentId, date])
+  @@index([studentId, status])
+  @@index([date])
+  @@index([seasonId])
 }
 
-////////////////////
-/// ESTÚDIO
-////////////////////
+//
+// STUDIO / SUBMISSION
+//
 
 model Submission {
-  id            String           @id @default(uuid())
-  studentId     String
-  trackSceneId  String
-  seasonId      String
-  attemptNumber Int
-  mediaUrl      String
-  status        SubmissionStatus
-  pressUnlocked Boolean
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id              String           @id @default(uuid())
+  studentId       String
+  trackSceneId    String
+  attemptNumber   Int              @default(1)
+  mediaUrl        String?
+  notes           String?
+  status          SubmissionStatus
+  pressUnlocked   Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  reviewedAt      DateTime?
 
-  student       User             @relation(fields: [studentId], references: [id])
-  reviews       Review[]
+  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  track   TrackScene     @relation(fields: [trackSceneId], references: [id], onDelete: Cascade)
+  reviews Review[]
+  pressAttempts PressAttempt[]
+
+  @@index([studentId])
+  @@index([trackSceneId])
+  @@index([status])
+  @@index([createdAt])
 }
+
+//
+// REVIEW (FEEDBACK)
+//
 
 model Review {
   id           String     @id @default(uuid())
   submissionId String
   teacherId    String
+  teacherName  String
   type         ReviewType
-  comment      String
+  rating       Float?
+  comment      String?
+  feedback     String?
+  technicalNotes String?
+  approved     Boolean    @default(false)
   createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
-  submission   Submission @relation(fields: [submissionId], references: [id])
-  teacher      User       @relation("TeacherReviews", fields: [teacherId], references: [id])
+  submission Submission     @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  teacher    StudentProfile @relation("TeacherReviews", fields: [teacherId], references: [userId], onDelete: Cascade)
 }
 
-////////////////////
-/// IMPRENSA
-////////////////////
+//
+// PRESS
+//
 
 model PressQuiz {
-  id            String          @id @default(uuid())
-  trackSceneId  String
-  seasonId      String
-  version       Int
-  questionsJson Json
-  maxAttempts   Int
-  passingScore  Int
-  status        PressQuizStatus
-  isActive      Boolean
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id              String   @id @default(uuid())
+  trackSceneId    String
+  seasonId        String
+  version         Int      @default(1)
+  questionsJson   Json?
+  maxAttempts     Int      @default(3)
+  passingScore    Int      @default(70)
+  status          TrackSceneStatus @default(DRAFT)
+  isActive        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  trackScene TrackScene       @relation(fields: [trackSceneId], references: [id], onDelete: Cascade)
+  season     Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  attempts   PressAttempt[]
+
+  @@index([trackSceneId])
+  @@index([seasonId])
 }
 
 model PressAttempt {
-  id            String       @id @default(uuid())
+  id            String      @id @default(uuid())
   studentId     String
   submissionId  String
   pressQuizId   String
   attemptNumber Int
-  answersJson   Json
-  score         Int
+  answersJson   Json?
+  score         Int?
   result        PressResult
   headline      String?
   subtitle      String?
-  createdAt     DateTime     @default(now())
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  student       User         @relation(fields: [studentId], references: [id])
+  student    StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  submission Submission     @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  quiz       PressQuiz      @relation(fields: [pressQuizId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([pressQuizId])
+  @@index([result])
 }
 
-////////////////////
-/// TURNÊ
-////////////////////
+//
+// TOUR / STREAK
+//
 
 model Tour {
-  id          String     @id @default(uuid())
-  studentId   String
-  seasonId    String
-  status      TourStatus
-  startedAt   DateTime
-  endedAt     DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id        String     @id @default(uuid())
+  studentId String
+  seasonId  String
+  name      String
+  description String?
+  requiredStreak Int  @default(7)
+  status    TourStatus
+  completed Boolean    @default(false)
+  startedAt DateTime
+  endedAt   DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  student     User       @relation(fields: [studentId], references: [id])
-  days        StreakDay[]
+  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  season  Season         @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  days    StreakDay[]
+  shows   TourShow[]
+
+  @@unique([studentId, seasonId])
+}
+
+model TourShow {
+  id         String   @id @default(uuid())
+  tourId     String
+  city       String
+  venue      String
+  date       DateTime
+  checkedIn  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
 }
 
 model StreakDay {
-  id        String          @id @default(uuid())
-  tourId   String
-  date      DateTime
-  status    StreakDayStatus
-  createdAt DateTime        @default(now())
+  id     String          @id @default(uuid())
+  tourId String
+  date   DateTime        @db.Date
+  status StreakDayStatus
+  createdAt DateTime     @default(now())
 
-  tour      Tour            @relation(fields: [tourId], references: [id])
+  tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
+
+  @@unique([tourId, date])
 }
+
+//
+// VACATION / LEAVE
+//
 
 model Vacation {
   id        String   @id @default(uuid())
@@ -543,27 +834,23 @@ model Vacation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  student   User     @relation(fields: [studentId], references: [id])
+  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  season  Season         @relation(fields: [seasonId], references: [id], onDelete: Cascade)
 }
 
-////////////////////
-/// CARREIRA
-////////////////////
+//
+// FAN ENGINE
+//
 
-model Career {
-  id             String   @id @default(uuid())
-  studentId      String
-  seasonId       String
-  fans           Int
-  level          Int
-  currentStreak  Int
-  lastActiveDate DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model FanRule {
+  id        String       @id @default(uuid())
+  eventType String       @unique
+  effect    StreakEffect
+  points    Int
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
-  student        User     @relation(fields: [studentId], references: [id])
-
-  @@unique([studentId, seasonId])
+  @@index([eventType])
 }
 
 model FanTransaction {
@@ -575,21 +862,153 @@ model FanTransaction {
   reason    String
   createdAt DateTime @default(now())
 
-  student   User     @relation(fields: [studentId], references: [id])
+  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  season  Season         @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  event   DomainEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
-////////////////////
-/// EVENT ENGINE
-////////////////////
+model Career {
+  id                String       @id @default(uuid())
+  studentId         String
+  seasonId          String
+  fans              Int          @default(0)
+  level             ArtistLevel  @default(SHOWER)
+  levelNumber       Int          @default(1)
+  currentStreak     Int          @default(0)
+  longestStreak     Int          @default(0)
+  totalDemos        Int          @default(0)
+  approvedDemos     Int          @default(0)
+  totalAchievements Int          @default(0)
+  toursCompleted    Int          @default(0)
+  lastActiveDate    DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  season  Season         @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, seasonId])
+  @@index([fans])
+  @@index([level])
+  @@index([currentStreak])
+}
+
+//
+// ACHIEVEMENTS
+//
+
+model Achievement {
+  id          String              @id @default(uuid())
+  title       String
+  description String
+  icon        String
+  category    AchievementCategory
+  tier        AchievementTier
+  requirement Int
+  fansReward  Int
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  students StudentAchievement[]
+
+  @@index([category])
+  @@index([tier])
+}
+
+model StudentAchievement {
+  id            String    @id @default(uuid())
+  studentId     String
+  achievementId String
+  unlocked      Boolean   @default(false)
+  unlockedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  student     StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  achievement Achievement    @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, achievementId])
+  @@index([studentId, unlocked])
+}
+
+//
+// NOTIFICATION
+//
+
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String
+  type       String    // Ex: 'REVIEW_RECEIVED', 'PRESS_UNLOCKED', 'TOUR_REMINDER'
+  title      String    // Título da notificação (vem do backend)
+  message    String    // Mensagem da notificação (vem do backend)
+  icon       String?   // Ícone opcional (ex: '🎉', '⚠️')
+  color      String?   // Cor opcional (ex: 'red', 'blue', 'green')
+  
+  // Deep Link System (IMPORTANTE!)
+  sourceType String?   // Ex: 'SUBMISSION', 'REVIEW', 'PROJECT', 'TRACK_SCENE', 'PRESS_QUIZ'
+  sourceId   String?   // ID da entidade origem (ex: submissionId, reviewId, projectId)
+  actionUrl  String?   // URL de ação customizada (ex: '/estudio/submission/sub-123')
+  
+  // COMO FUNCIONA O DEEP LINK:
+  // 1. Backend cria notificação com sourceType + sourceId
+  // 2. Opcionalmente inclui actionUrl customizada
+  // 3. Frontend parseia com utils/deeplink.ts
+  // 4. Navega para contexto específico com parâmetros
+  //
+  // Exemplos:
+  // - sourceType: 'REVIEW', sourceId: 'review-123' → Estúdio com review específica
+  // - sourceType: 'PROJECT', sourceId: 'proj-456' → Projetos com projeto aberto
+  // - actionUrl: '/estudio/submission/sub-123/review/rev-456' → Navegação direta
+  
+  readAt     DateTime? // null = não lida, preenchida = lida
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@index([sourceType, sourceId])
+}
+
+//
+// DOMAIN EVENT (AUDIT CORE)
+//
 
 model DomainEvent {
-  id         String    @id @default(uuid())
-  type       String
-  actorId    String
-  actorType  ActorType
-  targetType String
-  targetId   String
-  metadata   Json?
-  createdAt  DateTime  @default(now())
-  processed  Boolean   @default(false)
+  id                String         @id @default(uuid())
+  type              String
+  actorId           String
+  actorType         ActorType
+  targetType        String
+  targetId          String
+  metadata          Json?
+  processingVersion Int            @default(1)
+  processedAt       DateTime?
+  createdAt         DateTime       @default(now())
+
+  actor User?              @relation("ActorEvents", fields: [actorId], references: [id], onDelete: SetNull)
+  fanTransactions FanTransaction[]
+
+  @@index([type])
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([processedAt])
+  @@index([createdAt])
+}
+
+//
+// TEST TABLE (para testar migrations automáticas)
+//
+
+model TestTable {
+  id        String   @id @default(uuid())
+  name      String
+  value     Int?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([isActive])
 }
