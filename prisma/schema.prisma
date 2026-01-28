@@ -1,0 +1,595 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+////////////////////
+/// ENUMS
+////////////////////
+
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum CourseType {
+  MUSIC
+  THEATER
+}
+
+enum SeasonStatus {
+  PLANNED
+  ACTIVE
+  CLOSED
+}
+
+enum ClassStudentStatus {
+  ACTIVE
+  TRANSFERRED
+  DROPPED
+}
+
+enum ClassTeacherStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum ProjectType {
+  ALBUM
+  PLAY
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+}
+
+enum TrackSceneStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum StudentTrackStatus {
+  LOCKED
+  AVAILABLE
+  STUDYING
+  COMPLETED
+}
+
+enum DailyMissionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum StudentDailyMissionStatus {
+  PENDING
+  DONE
+  DONE_WITH_PENALTY
+  SKIPPED
+}
+
+enum SubmissionStatus {
+  PENDING
+  REVIEWED
+  REJECTED
+}
+
+enum ReviewType {
+  POSITIVE
+  CONSTRUCTIVE
+  CRITICAL
+}
+
+enum PressResult {
+  PASS
+  FAIL
+}
+
+enum PressQuizStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TourStatus {
+  ACTIVE
+  PAUSED
+  BROKEN
+  FINISHED
+}
+
+enum StreakDayStatus {
+  DONE
+  MISSED
+  PAUSED
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  RULE_ENGINE
+}
+
+enum TrackMaterialType {
+  PDF
+  AUDIO
+  TEXT
+  LINK
+}
+
+////////////////////
+/// IDENTIDADE
+////////////////////
+
+model User {
+  id                 String   @id @default(uuid())
+  name               String
+  email              String   @unique
+  passwordHash       String
+  role               UserRole
+  status             UserStatus
+  mustChangePassword Boolean
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  studentProfile     StudentProfile?
+
+  studentClasses     ClassStudent[]
+  teacherClasses     ClassTeacher[]
+
+  studentTrackScenes StudentTrackScene[]
+  dailyMissions      StudentDailyMission[]
+
+  submissions        Submission[]
+  reviewsGiven       Review[]        @relation("TeacherReviews")
+  pressAttempts      PressAttempt[]
+
+  tours              Tour[]
+  vacations          Vacation[]
+  careers            Career[]
+  fanTransactions    FanTransaction[]
+}
+
+model StudentProfile {
+  userId           String   @id
+  stageName        String
+  avatarUrl        String?
+  bio              String?
+  currentCourseId  String?
+  currentSeasonId  String?
+  currentClassId   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id])
+}
+
+////////////////////
+/// ESCOLA
+////////////////////
+
+model School {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses   Course[]
+}
+
+model Course {
+  id        String     @id @default(uuid())
+  schoolId  String
+  name      String
+  type      CourseType
+  isActive  Boolean
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  school    School     @relation(fields: [schoolId], references: [id])
+  seasons   Season[]
+  templates ProjectTemplate[]
+}
+
+model Season {
+  id        String       @id @default(uuid())
+  courseId  String
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  status    SeasonStatus
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  course    Course      @relation(fields: [courseId], references: [id])
+  classes   Class[]
+}
+
+model Class {
+  id          String   @id @default(uuid())
+  seasonId    String
+  name        String
+  maxStudents Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  season      Season   @relation(fields: [seasonId], references: [id])
+  students    ClassStudent[]
+  teachers    ClassTeacher[]
+  projects    Project[]
+}
+
+model ClassStudent {
+  id        String              @id @default(uuid())
+  classId   String
+  studentId String
+  joinedAt  DateTime
+  leftAt    DateTime?
+  status    ClassStudentStatus
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  class     Class   @relation(fields: [classId], references: [id])
+  student   User    @relation(fields: [studentId], references: [id])
+
+  @@unique([classId, studentId])
+}
+
+model ClassTeacher {
+  id        String              @id @default(uuid())
+  classId   String
+  teacherId String
+  joinedAt  DateTime
+  leftAt    DateTime?
+  status    ClassTeacherStatus
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  class     Class   @relation(fields: [classId], references: [id])
+  teacher   User    @relation(fields: [teacherId], references: [id])
+
+  @@unique([classId, teacherId])
+}
+
+////////////////////
+/// TEMPLATES
+////////////////////
+
+model ProjectTemplate {
+  id          String      @id @default(uuid())
+  courseId    String
+  name        String
+  type        ProjectType
+  description String?
+  version     Int
+  isActive    Boolean
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  course      Course     @relation(fields: [courseId], references: [id])
+  scenes      TrackSceneTemplate[]
+}
+
+model TrackSceneTemplate {
+  id                   String   @id @default(uuid())
+  projectTemplateId     String
+  title                String
+  description          String?
+  technicalInstruction String?
+  order                Int
+  unlockAfterTrackId   String?
+  version              Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  projectTemplate      ProjectTemplate @relation(fields: [projectTemplateId], references: [id])
+  materials            TrackMaterialTemplate[]
+}
+
+model TrackMaterialTemplate {
+  id                   String            @id @default(uuid())
+  trackSceneTemplateId String
+  type                 TrackMaterialType
+  title                String
+  defaultContentUrl    String?
+  defaultTextContent   String?
+  order                Int
+  isRequired           Boolean
+  version              Int
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  trackSceneTemplate   TrackSceneTemplate @relation(fields: [trackSceneTemplateId], references: [id])
+}
+
+////////////////////
+/// INSTÂNCIAS
+////////////////////
+
+model Project {
+  id                    String        @id @default(uuid())
+  projectTemplateId      String
+  projectTemplateVersion Int
+  classId               String
+  seasonId              String
+  name                  String
+  status                ProjectStatus
+  isVisible             Boolean
+  releasedAt            DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  class                 Class         @relation(fields: [classId], references: [id])
+  scenes                TrackScene[]
+}
+
+model TrackScene {
+  id                        String          @id @default(uuid())
+  trackSceneTemplateId      String
+  trackSceneTemplateVersion Int
+  projectId                String
+  title                     String
+  description               String?
+  videoUrl                  String?
+  technicalInstruction      String?
+  order                     Int
+  status                    TrackSceneStatus
+  isVisible                 Boolean
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+
+  project                   Project         @relation(fields: [projectId], references: [id])
+  materials                 TrackMaterial[]
+  studentProgress           StudentTrackScene[]
+}
+
+model TrackMaterial {
+  id                          String            @id @default(uuid())
+  trackMaterialTemplateId     String
+  trackMaterialTemplateVersion Int
+  trackSceneId                String
+  type                        TrackMaterialType
+  title                       String
+  contentUrl                  String?
+  textContent                 String?
+  order                       Int
+  isVisible                   Boolean
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
+
+  trackScene                  TrackScene        @relation(fields: [trackSceneId], references: [id])
+}
+
+////////////////////
+/// PROGRESSO
+////////////////////
+
+model StudentTrackScene {
+  id           String            @id @default(uuid())
+  studentId    String
+  trackSceneId String
+  seasonId     String
+  status       StudentTrackStatus
+  completedAt  DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  student      User              @relation(fields: [studentId], references: [id])
+  trackScene   TrackScene        @relation(fields: [trackSceneId], references: [id])
+
+  @@unique([studentId, trackSceneId, seasonId])
+}
+
+////////////////////
+/// ROTINA DIÁRIA
+////////////////////
+
+model DailyMission {
+  id        String              @id @default(uuid())
+  courseId  String
+  title     String
+  videoUrl  String?
+  order     Int
+  status    DailyMissionStatus
+  isActive  Boolean
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+model DailyMissionQuiz {
+  id                     String   @id @default(uuid())
+  dailyMissionId         String
+  version                Int
+  questionsJson          Json
+  maxAttemptsPerDay      Int
+  allowRecoveryAttempt   Boolean
+  isActive               Boolean
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model StudentDailyMission {
+  id               String                     @id @default(uuid())
+  studentId        String
+  dailyMissionId   String
+  date             DateTime
+  status           StudentDailyMissionStatus
+  quizId           String?
+  attemptsCount    Int
+  answersJson      Json?
+  completedAt      DateTime?
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  student          User                      @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, dailyMissionId, date])
+}
+
+////////////////////
+/// ESTÚDIO
+////////////////////
+
+model Submission {
+  id            String           @id @default(uuid())
+  studentId     String
+  trackSceneId  String
+  seasonId      String
+  attemptNumber Int
+  mediaUrl      String
+  status        SubmissionStatus
+  pressUnlocked Boolean
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  student       User             @relation(fields: [studentId], references: [id])
+  reviews       Review[]
+}
+
+model Review {
+  id           String     @id @default(uuid())
+  submissionId String
+  teacherId    String
+  type         ReviewType
+  comment      String
+  createdAt    DateTime   @default(now())
+
+  submission   Submission @relation(fields: [submissionId], references: [id])
+  teacher      User       @relation("TeacherReviews", fields: [teacherId], references: [id])
+}
+
+////////////////////
+/// IMPRENSA
+////////////////////
+
+model PressQuiz {
+  id            String          @id @default(uuid())
+  trackSceneId  String
+  seasonId      String
+  version       Int
+  questionsJson Json
+  maxAttempts   Int
+  passingScore  Int
+  status        PressQuizStatus
+  isActive      Boolean
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model PressAttempt {
+  id            String       @id @default(uuid())
+  studentId     String
+  submissionId  String
+  pressQuizId   String
+  attemptNumber Int
+  answersJson   Json
+  score         Int
+  result        PressResult
+  headline      String?
+  subtitle      String?
+  createdAt     DateTime     @default(now())
+
+  student       User         @relation(fields: [studentId], references: [id])
+}
+
+////////////////////
+/// TURNÊ
+////////////////////
+
+model Tour {
+  id          String     @id @default(uuid())
+  studentId   String
+  seasonId    String
+  status      TourStatus
+  startedAt   DateTime
+  endedAt     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  student     User       @relation(fields: [studentId], references: [id])
+  days        StreakDay[]
+}
+
+model StreakDay {
+  id        String          @id @default(uuid())
+  tourId   String
+  date      DateTime
+  status    StreakDayStatus
+  createdAt DateTime        @default(now())
+
+  tour      Tour            @relation(fields: [tourId], references: [id])
+}
+
+model Vacation {
+  id        String   @id @default(uuid())
+  studentId String
+  seasonId  String
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student   User     @relation(fields: [studentId], references: [id])
+}
+
+////////////////////
+/// CARREIRA
+////////////////////
+
+model Career {
+  id             String   @id @default(uuid())
+  studentId      String
+  seasonId       String
+  fans           Int
+  level          Int
+  currentStreak  Int
+  lastActiveDate DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  student        User     @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, seasonId])
+}
+
+model FanTransaction {
+  id        String   @id @default(uuid())
+  studentId String
+  seasonId  String
+  eventId   String
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  student   User     @relation(fields: [studentId], references: [id])
+}
+
+////////////////////
+/// EVENT ENGINE
+////////////////////
+
+model DomainEvent {
+  id         String    @id @default(uuid())
+  type       String
+  actorId    String
+  actorType  ActorType
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+  processed  Boolean   @default(false)
+}
