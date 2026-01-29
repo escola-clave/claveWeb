@@ -8,15 +8,7 @@ Plataforma gamificada para gestão pedagógica de escolas de música e teatro.
 # 1. Instalar dependências
 npm install
 
-# 2. Configurar .env
-cp .env.example .env
-# Edite DATABASE_URL
-
-# 3. Setup banco de dados
-createdb clave_dev
-npm run db:reset
-
-# 4. Iniciar
+# 2. Iniciar dev server
 npm run dev
 ```
 
@@ -40,26 +32,14 @@ claveWeb/
 └── README.md           # Este arquivo
 ```
 
-## 🗄️ Banco de Dados
+## 🗄️ Dados
 
-**PostgreSQL + Prisma**
+**Dados Mockados**
 
-```bash
-# Gerar cliente
-npm run db:generate
+Este projeto usa dados mockados para desenvolvimento. Não há necessidade de banco de dados.
 
-# Migrations
-npm run db:migrate
-
-# Popular banco
-npm run db:seed
-
-# Resetar tudo
-npm run db:reset
-
-# Interface web
-npm run db:studio
-```
+- Dados localizados em: `src/data/centralizedMocks.ts`
+- API mockada em: `src/services/api.service.ts`
 
 ## 📖 Documentação
 
@@ -70,9 +50,10 @@ npm run db:studio
 
 ## 🎯 Stack
 
-- **Frontend**: React 18 + TypeScript + Tailwind
-- **Backend**: Node.js + Prisma + PostgreSQL
-- **Build**: Vite
+- **Frontend**: React 18 + TypeScript + Tailwind CSS
+- **Build Tool**: Vite
+- **UI Components**: Radix UI + shadcn/ui
+- **Data**: Dados mockados localmente
 
 ## 📊 Dados de Teste
 
@@ -86,20 +67,15 @@ npm run db:studio
 ## ⚙️ Scripts
 
 ```bash
-npm run dev          # Dev server
-npm run build        # Build produção
-npm run db:generate  # Gerar Prisma client
-npm run db:migrate   # Aplicar migrations
-npm run db:seed      # Popular banco
-npm run db:reset     # Resetar banco
-npm run db:studio    # Interface web
+npm run dev      # Dev server (http://localhost:3000)
+npm run build    # Build para produção
+npm run preview  # Preview do build de produção
+npm run start    # Start production server
 ```
 
 ## 🔑 Variáveis de Ambiente
 
-```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/clave_dev?schema=public"
-```
+Não são necessárias variáveis de ambiente para desenvolvimento local. O app usa dados mockados.
 
 ## 🚀 Deploy
 
@@ -121,9 +97,9 @@ Ou siga o guia completo em **DEPLOY_RAILWAY.md**
 1. Faça commit e push do código
 2. Acesse [railway.app](https://railway.app)
 3. Crie um novo projeto do seu repositório GitHub
-4. Adicione um PostgreSQL database
-5. Configure variáveis de ambiente
-6. Deploy automático! 🎉
+4. Deploy automático! 🎉
+
+**Nota:** Este é um frontend estático, não precisa de banco de dados.
 
 ---
 
