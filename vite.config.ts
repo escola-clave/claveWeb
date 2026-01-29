@@ -19,7 +19,8 @@ export default defineConfig({
     open: true,
   },
   preview: {
-    port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
+    port: Number(process.env.PORT) || 3000,
     host: '0.0.0.0',
+    strictPort: false,
   },
 });
