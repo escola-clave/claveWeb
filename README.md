@@ -101,6 +101,30 @@ npm run db:studio    # Interface web
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/clave_dev?schema=public"
 ```
 
+## 🚀 Deploy
+
+### Railway (Recomendado)
+
+Configuração pronta para deploy no Railway:
+
+```bash
+# Windows (PowerShell)
+.\railway-quick-start.ps1
+
+# Linux/Mac
+bash railway-quick-start.sh
+```
+
+Ou siga o guia completo em **DEPLOY_RAILWAY.md**
+
+**Passos rápidos:**
+1. Faça commit e push do código
+2. Acesse [railway.app](https://railway.app)
+3. Crie um novo projeto do seu repositório GitHub
+4. Adicione um PostgreSQL database
+5. Configure variáveis de ambiente
+6. Deploy automático! 🎉
+
 ---
 
-**Versão**: 0.1.0 | **Docs**: API.md
+**Versão**: 0.1.0 | **Docs**: API.md | **Deploy**: DEPLOY_RAILWAY.md
