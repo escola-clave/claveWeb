@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
-import { Music2, Guitar, Mic2 } from 'lucide-react';
+import { Music2, Guitar, Mic2, Map } from 'lucide-react';
 import { motion } from 'motion/react';
 
-export default function Login() {
+interface LoginProps {
+  onShowDocs?: () => void;
+}
+
+export default function Login({ onShowDocs }: LoginProps) {
   const [email, setEmail] = useState('mari.costa@demo.com'); // ✅ Preenchido para demo
   const [password, setPassword] = useState('demo123'); // ✅ Preenchido para demo
   const [loading, setLoading] = useState(false);
@@ -105,9 +109,22 @@ export default function Login() {
           <div className="mt-6 text-center text-sm text-purple-300">
             <p>Primeiro acesso? Você será solicitado a trocar a senha.</p>
           </div>
+
+          {onShowDocs && (
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <button
+                type="button"
+                onClick={onShowDocs}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium text-purple-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/30 transition-all duration-200"
+              >
+                <Map className="w-4 h-4" />
+                Mapa de Telas (Design Doc)
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="mt-6 text-center text-xs text-purple-400">
+        <div className="mt-4 text-center text-xs text-purple-400">
           <p className="italic">"Você apareceu hoje para a sua carreira?"</p>
         </div>
       </motion.div>

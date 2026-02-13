@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './components/AuthContext';
 import { ArtistProvider } from './components/ArtistContext';
 import { StudyTrackProvider } from './components/StudyTrackContext';
 import Login from './components/Login';
+import MapaDeTelas from './components/MapaDeTelas';
 import Palco from './components/Palco';
 import RotinaDiaria from './components/RotinaDiaria';
 import Projetos from './components/Projetos';
@@ -24,7 +25,7 @@ interface NavigationState {
 function AppContent() {
   const { user } = useAuth();
   const [currentView, setCurrentView] = useState<NavigationState>({ view: 'palco' });
-
+  const [showDocs, setShowDocs] = useState(false);
   // Helper para navegação com parâmetros
   const navigate = (view: ViewType, params?: any) => {
     setCurrentView({ view, params });
@@ -36,8 +37,13 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView.view]);
 
+  // Documentação acessível sem login
+  if (showDocs) {
+    return <MapaDeTelas onBack={() => setShowDocs(false)} />;
+  }
+
   if (!user) {
-    return <Login />;
+    return <Login onShowDocs={() => setShowDocs(true)} />;
   }
 
   const renderView = () => {
