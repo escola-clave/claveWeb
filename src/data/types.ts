@@ -34,7 +34,9 @@ export enum SeasonStatus {
 
 export enum ProjectType {
   ALBUM = 'ALBUM',
+  MUSIC_ALBUM = 'MUSIC_ALBUM',
   PLAY = 'PLAY',
+  THEATER_PLAY = 'THEATER_PLAY',
 }
 
 export enum ProjectStatus {

@@ -435,7 +435,36 @@ export default function Estudio({ onBack, onNavigateToPress, initialSubmissionId
 
   const renderFeedback = () => {
     const submission = userSubmissions.find(s => s.id === selectedSubmission);
-    if (!submission || (submission.status !== 'avaliada' && submission.status !== 'reprovada')) return null;
+    if (!submission || (submission.status !== 'avaliada' && submission.status !== 'reprovada')) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/10 text-center">
+            <div className="bg-yellow-500/20 p-4 rounded-full w-fit mx-auto mb-4">
+              <AlertCircle className="w-10 h-10 text-yellow-400" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">
+              {!submission ? 'Submissão não encontrada' : 'Aguardando avaliação'}
+            </h2>
+            <p className="text-purple-300 mb-6">
+              {!submission 
+                ? 'Esta gravação pode ter sido removida ou o link está incorreto.'
+                : 'O professor ainda não avaliou esta submissão. Volte mais tarde!'
+              }
+            </p>
+            <button
+              onClick={() => setCurrentView('home')}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+            >
+              Ver Todas as Gravações
+            </button>
+          </div>
+        </motion.div>
+      );
+    }
 
     return (
       <motion.div

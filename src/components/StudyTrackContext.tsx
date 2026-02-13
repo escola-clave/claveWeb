@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import MOCK_DATA from '../data/centralizedMocks';
 
 export interface StudentStudyTrack {
   id: string;
@@ -19,7 +20,32 @@ interface StudyTrackContextType {
 
 const StudyTrackContext = createContext<StudyTrackContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'clave-study-tracks-progress';
+const STORAGE_KEY = 'clave-study-tracks-progress-v2';
+
+/**
+ * Gera o progresso inicial das study tracks baseado nos dados mock.
+ * Se o studentProgress diz que uma trackScene está completa (completed: true),
+ * então TODAS as study tracks dessa trackScene são marcadas como concluídas.
+ */
+function buildInitialStudyTrackProgress(): StudentStudyTrack[] {
+  const completedTrackSceneIds = (MOCK_DATA.studentProgress || [])
+    .filter(p => p.completed === true)
+    .map(p => p.trackSceneId);
+
+  const allStudyTracks = MOCK_DATA.studyTracks || [];
+
+  return allStudyTracks
+    .filter(st => completedTrackSceneIds.includes(st.trackSceneId))
+    .map(st => ({
+      id: `progress-${st.id}`,
+      studentId: 'user-mariana',
+      studyTrackId: st.id,
+      completed: true,
+      completedAt: MOCK_DATA.studentProgress?.find(p => p.trackSceneId === st.trackSceneId)?.completedAt || new Date(),
+      notes: 'Concluído conforme progresso do aluno',
+      practiceTime: st.estimatedMinutes || 15,
+    }));
+}
 
 export function StudyTrackProvider({ children }: { children: ReactNode }) {
   const [studentStudyTracks, setStudentStudyTracks] = useState<StudentStudyTrack[]>(() => {
@@ -30,16 +56,23 @@ export function StudyTrackProvider({ children }: { children: ReactNode }) {
         try {
           const parsed = JSON.parse(saved);
           // Converter strings de data de volta para objetos Date
-          return parsed.map((track: any) => ({
+          const fromStorage: StudentStudyTrack[] = parsed.map((track: any) => ({
             ...track,
             completedAt: track.completedAt ? new Date(track.completedAt) : undefined,
           }));
+          // Mesclar: garantir que os dados iniciais do mock estejam presentes
+          // (caso o localStorage tenha sido salvo antes da inicialização correta)
+          const initialProgress = buildInitialStudyTrackProgress();
+          const existingIds = new Set(fromStorage.map(t => t.studyTrackId));
+          const missing = initialProgress.filter(t => !existingIds.has(t.studyTrackId));
+          return [...fromStorage, ...missing];
         } catch (e) {
           console.error('Erro ao carregar progresso:', e);
         }
       }
     }
-    return [];
+    // Se não tem nada no localStorage, gerar progresso inicial a partir dos mocks
+    return buildInitialStudyTrackProgress();
   });
 
   // Salvar no localStorage sempre que mudar

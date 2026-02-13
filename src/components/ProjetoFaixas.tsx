@@ -359,10 +359,16 @@ export default function ProjetoFaixas({ projectId, onBack, initialTrackId, onNav
     );
   }
 
-  // Lista de músicas do projeto
-  const completedTracks = trackProgress.filter(p => 
-    projectTracks.some(t => t.id === p.trackSceneId) && p.status === 'COMPLETED'
-  ).length;
+  // Lista de músicas do projeto - calcular progresso real baseado nas study tracks
+  const completedTracks = projectTracks.filter(track => {
+    const trackLessons = MOCK_DATA.studyTracks?.filter(l => l.trackSceneId === track.id) || [];
+    if (trackLessons.length === 0) return false;
+    const allDone = trackLessons.every(lesson => isStudyTrackCompleted(lesson.id));
+    if (allDone) return true;
+    // Também considerar se foi completada no runtime via completeTrackScene
+    const runtimeProgress = trackProgress.find(p => p.trackSceneId === track.id);
+    return runtimeProgress?.completed === true && runtimeProgress?.completedAt != null;
+  }).length;
   const totalTracks = projectTracks.length;
   const progressPercent = totalTracks > 0 ? (completedTracks / totalTracks) * 100 : 0;
 
@@ -371,7 +377,7 @@ export default function ProjetoFaixas({ projectId, onBack, initialTrackId, onNav
       <AppBar 
         onBack={onBack} 
         showBackButton 
-        title={project.type === 'ALBUM' ? 'Músicas do Álbum' : 'Cenas da Peça'} 
+        title={(project.type === 'ALBUM' || project.type === 'MUSIC_ALBUM') ? 'Músicas do Álbum' : 'Cenas da Peça'} 
       />
       
       <div className="max-w-4xl mx-auto p-4 md:p-8">
@@ -394,7 +400,7 @@ export default function ProjetoFaixas({ projectId, onBack, initialTrackId, onNav
             />
           </div>
           <p className="text-sm text-purple-200 mt-2">
-            {completedTracks} de {totalTracks} {project.type === 'ALBUM' ? 'músicas' : 'cenas'} completas
+            {completedTracks} de {totalTracks} {(project.type === 'ALBUM' || project.type === 'MUSIC_ALBUM') ? 'músicas' : 'cenas'} completas
           </p>
         </motion.div>
 
@@ -410,10 +416,15 @@ export default function ProjetoFaixas({ projectId, onBack, initialTrackId, onNav
             const totalStudyTracks = trackLessons.length;
             const allStudyTracksCompleted = totalStudyTracks > 0 && completedStudyTracks === totalStudyTracks;
             
-            // Verificar progresso usando studentProgress do MOCK_DATA
-            const studentProgress = MOCK_DATA.studentProgress?.find(p => p.trackSceneId === track.id);
-            const isCompleted = studentProgress?.completed || false;
-            const isLocked = !(studentProgress?.unlocked !== false); // Bloqueada se não estiver explicitamente desbloqueada
+            // Verificar progresso real: completa somente se TODAS as study tracks foram concluídas
+            // ou se foi marcada como completa via completeTrackScene (runtime)
+            const runtimeProgress = trackProgress.find(p => p.trackSceneId === track.id);
+            const wasCompletedAtRuntime = runtimeProgress?.completed && runtimeProgress?.completedAt != null;
+            const isCompleted = allStudyTracksCompleted || (wasCompletedAtRuntime === true);
+            
+            // Verificar lock: desbloqueada se tem progresso no mock ou se é uma das primeiras faixas
+            const studentProgressMock = MOCK_DATA.studentProgress?.find(p => p.trackSceneId === track.id);
+            const isLocked = !(studentProgressMock?.unlocked !== false); // Bloqueada se não estiver explicitamente desbloqueada
             
             const handleGoToStudio = (e: React.MouseEvent) => {
               e.stopPropagation();

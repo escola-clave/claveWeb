@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Music, Calendar, Album, Lock, CheckCircle, Theater, Guitar, ChevronRight, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useArtist } from './ArtistContext';
+import { useStudyTrack } from './StudyTrackContext';
 import MOCK_DATA from '../data/centralizedMocks';
 import AppBar from './AppBar';
 import ProjetoFaixas from './ProjetoFaixas';
@@ -16,6 +17,7 @@ interface ProjetosProps {
 export default function Projetos({ onBack, onNavigate, initialProjectId, initialTrackId }: ProjetosProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(initialProjectId || null);
   const { trackProgress } = useArtist();
+  const { isStudyTrackCompleted } = useStudyTrack();
 
   // ✅ Deeplink: Se initialProjectId foi passado, abrir projeto automaticamente
   useEffect(() => {
@@ -66,9 +68,15 @@ export default function Projetos({ onBack, onNavigate, initialProjectId, initial
 
   const getProjectProgress = (projectId: string) => {
     const projectTracks = MOCK_DATA.trackScenes.filter(t => t.projectId === projectId); // ✅ Não tracks
-    const completedTracks = trackProgress.filter(p => 
-      projectTracks.some(t => t.id === p.trackSceneId) && p.status === 'COMPLETED'
-    ).length;
+    const completedTracks = projectTracks.filter(track => {
+      const trackLessons = MOCK_DATA.studyTracks?.filter(l => l.trackSceneId === track.id) || [];
+      if (trackLessons.length === 0) return false;
+      const allDone = trackLessons.every(lesson => isStudyTrackCompleted(lesson.id));
+      if (allDone) return true;
+      // Também considerar se foi completada no runtime via completeTrackScene
+      const runtimeProgress = trackProgress.find(p => p.trackSceneId === track.id);
+      return runtimeProgress?.completed === true && runtimeProgress?.completedAt != null;
+    }).length;
     const total = projectTracks.length;
     return { completed: completedTracks, total, percent: total > 0 ? (completedTracks / total) * 100 : 0 };
   };
@@ -127,7 +135,7 @@ export default function Projetos({ onBack, onNavigate, initialProjectId, initial
                   <div className="flex items-start gap-4 md:flex-1">
                     {/* Project Icon */}
                     <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-4 rounded-xl flex-shrink-0">
-                      {project.type === 'ALBUM' ? (
+                      {(project.type === 'ALBUM' || project.type === 'MUSIC_ALBUM') ? (
                         <Guitar className="w-8 h-8 text-white" />
                       ) : (
                         <Theater className="w-8 h-8 text-white" />
@@ -151,7 +159,7 @@ export default function Projetos({ onBack, onNavigate, initialProjectId, initial
                         <p className="text-purple-200 text-sm mb-1">{project.subtitle}</p>
                       )}
                       <p className="text-purple-300 text-sm mb-2">
-                        {project.type === 'ALBUM' ? '🎵 Álbum Musical' : '🎭 Peça Teatral'} · {tracksCount} {project.type === 'ALBUM' ? 'faixas' : 'cenas'}
+                        {(project.type === 'ALBUM' || project.type === 'MUSIC_ALBUM') ? '🎵 Álbum Musical' : '🎭 Peça Teatral'} · {tracksCount} {(project.type === 'ALBUM' || project.type === 'MUSIC_ALBUM') ? 'faixas' : 'cenas'}
                       </p>
                       
                       {/* Description */}

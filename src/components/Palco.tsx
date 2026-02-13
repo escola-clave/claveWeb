@@ -148,15 +148,18 @@ export default function Palco({ onNavigate }: PalcoProps) {
           </motion.div>
         )}
 
-        {/* Ranking de Fãs */}
-        <motion.div
+        {/* Ranking de Fãs - Clicável → Rotina Diária */}
+        <motion.button
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-lg rounded-2xl p-6 border border-purple-500/30 mb-6"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onNavigate('rotina')}
+          className="w-full text-left bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-lg rounded-2xl p-6 border border-purple-500/30 mb-6 hover:border-purple-400/50 transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-3 rounded-xl">
+              <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-3 rounded-xl group-hover:scale-110 transition-transform">
                 <Trophy className="w-8 h-8 text-white" />
               </div>
               <div>
@@ -179,10 +182,16 @@ export default function Palco({ onNavigate }: PalcoProps) {
               className="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full"
             />
           </div>
-          <p className="text-xs text-purple-300 mt-2">
-            {nextThreshold - career.fans} fãs até o próximo nível
-          </p>
-        </motion.div>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-purple-300">
+              {nextThreshold - career.fans} fãs até o próximo nível
+            </p>
+            <p className="text-xs text-purple-400 group-hover:text-purple-300 transition-colors flex items-center gap-1">
+              <Radio className="w-3 h-3" />
+              Fazer Rotina Diária →
+            </p>
+          </div>
+        </motion.button>
 
         {/* Notificações */}
         {notifications.length > 0 && (
@@ -280,7 +289,7 @@ export default function Palco({ onNavigate }: PalcoProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="hidden md:block"
+          className=""
         >
           <h3 className="text-xl font-bold text-white mb-4">Atalhos Rápidos</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
